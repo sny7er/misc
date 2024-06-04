@@ -8,6 +8,7 @@ https://www.reddit.com/r/HowToHack/comments/ewm1ax/a_complete_penetration_testin
 
 
 revshells.com
+
 apt install pwncat-cs
    once in do ctrl-d to get regular prompt..  ctrl-d again;  then : upload /opt/file  boom
 

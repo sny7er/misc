@@ -1,0 +1,274 @@
+(() => {
+  // ========= CONFIG =========
+  // Put *distinctive* markers you’ll inject (e.g., "__XSS_PROBE__", "XSS123").
+  // You can include plain strings or regex-like strings (auto-escaped for text search).
+  let MARKERS = ["__XSS_PROBE__", "XSS123"];
+  const ENABLE_ATTRIBUTE_SCAN = true;           // also flag attributes that contain markers
+  const BADGE_TEXT = "XSS";                     // small badge label
+  const HIGHLIGHT_CLASS = "xss-tripwire-highlight";
+  const BADGE_CLASS = "xss-tripwire-badge";
+  const MAX_HIGHLIGHTS = 2000;                  // safety cap
+  // ==========================
+
+  // CSS for highlights + badge (subtle but obvious)
+  const style = document.createElement("style");
+  style.textContent = `
+    .${HIGHLIGHT_CLASS} {
+      outline: 3px solid rgba(255, 0, 0, 0.7) !important;
+      outline-offset: 2px;
+      position: relative;
+      transition: box-shadow .2s ease;
+      box-shadow: 0 0 0 2px rgba(255,0,0,0.2);
+      background-image: linear-gradient(0deg, rgba(255,0,0,0.06), rgba(255,0,0,0.06));
+    }
+    .${HIGHLIGHT_CLASS}:hover {
+      box-shadow: 0 0 0 3px rgba(255,0,0,0.35);
+    }
+    .${BADGE_CLASS} {
+      position: absolute;
+      top: -8px; right: -8px;
+      font: 11px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: #ff0033;
+      color: #fff;
+      border-radius: 8px;
+      padding: 2px 5px;
+      z-index: 2147483647;
+      pointer-events: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+  `;
+  document.documentElement.appendChild(style);
+
+  // Utility: console logger
+  function logSink(sinkName, details) {
+    console.group(`⚠️ DOM XSS Sink: ${sinkName}`);
+    for (const [k, v] of Object.entries(details)) console.log(`${k}:`, v);
+    console.trace("Stack trace:");
+    console.groupEnd();
+  }
+
+  // Escape regex meta for safe substring matching
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  // Build a combined matcher for text scanning
+  function buildMatcher() {
+    const parts = MARKERS.map(m => escapeRe(String(m))).filter(Boolean);
+    if (!parts.length) return null;
+    return new RegExp(parts.join("|"), "i");
+  }
+  let TEXT_MATCHER = buildMatcher();
+
+  // Highlight management
+  let highlightCount = 0;
+  const highlighted = new WeakSet();
+
+  function addBadge(el) {
+    if (el.querySelector && el.querySelector(`:scope > .${BADGE_CLASS}`)) return;
+    const b = document.createElement("span");
+    b.className = BADGE_CLASS;
+    b.textContent = BADGE_TEXT;
+    el.appendChild(b);
+  }
+
+  function highlightElement(el, why = "marker in content/attribute") {
+    if (!el || highlighted.has(el)) return;
+    el.classList.add(HIGHLIGHT_CLASS);
+    el.title = (el.title ? el.title + " | " : "") + `XSS tripwire: ${why}`;
+    addBadge(el);
+    highlighted.add(el);
+    highlightCount++;
+  }
+
+  function nodeHasMarkerText(node) {
+    if (!TEXT_MATCHER) return false;
+    // Only check text nodes quickly
+    if (node.nodeType === Node.TEXT_NODE) {
+      return TEXT_MATCHER.test(node.nodeValue || "");
+    }
+    return false;
+  }
+
+  function elementAttributesContainMarker(el) {
+    if (!ENABLE_ATTRIBUTE_SCAN || !el || !el.attributes) return false;
+    for (const attr of el.attributes) {
+      const val = attr.value || "";
+      if (TEXT_MATCHER && TEXT_MATCHER.test(val)) {
+        return {attr: attr.name, val};
+      }
+    }
+    return false;
+  }
+
+  function scanNodeDeep(root) {
+    if (!root || highlightCount >= MAX_HIGHLIGHTS) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      if (nodeHasMarkerText(textNode)) {
+        const el = textNode.parentElement;
+        if (el) highlightElement(el, "marker in text node");
+        if (highlightCount >= MAX_HIGHLIGHTS) return;
+      }
+    }
+    if (ENABLE_ATTRIBUTE_SCAN && root.nodeType === Node.ELEMENT_NODE) {
+      const info = elementAttributesContainMarker(root);
+      if (info) highlightElement(root, `marker in @${info.attr}`);
+    }
+    if (root.querySelectorAll) {
+      const all = root.querySelectorAll("*");
+      for (const el of all) {
+        if (highlightCount >= MAX_HIGHLIGHTS) break;
+        if (ENABLE_ATTRIBUTE_SCAN) {
+          const info2 = elementAttributesContainMarker(el);
+          if (info2) highlightElement(el, `marker in @${info2.attr}`);
+        }
+      }
+    }
+  }
+
+  // Observe DOM mutations to catch async insertions
+  const mo = new MutationObserver(muts => {
+    for (const m of muts) {
+      if (highlightCount >= MAX_HIGHLIGHTS) break;
+      if (m.type === "childList") {
+        m.addedNodes && m.addedNodes.forEach(n => {
+          if (n.nodeType === Node.TEXT_NODE) {
+            if (nodeHasMarkerText(n)) {
+              const parent = n.parentElement;
+              if (parent) highlightElement(parent, "marker in text node (mutation)");
+            }
+          } else {
+            scanNodeDeep(n);
+          }
+        });
+      } else if (m.type === "characterData") {
+        if (nodeHasMarkerText(m.target)) {
+          const el = m.target.parentElement;
+          if (el) highlightElement(el, "marker in text node (characterData)");
+        }
+      } else if (m.type === "attributes" && ENABLE_ATTRIBUTE_SCAN) {
+        const el = m.target;
+        const info = elementAttributesContainMarker(el);
+        if (info) highlightElement(el, `marker in @${info.attr} (mutation)`);
+      }
+    }
+  });
+  mo.observe(document.documentElement, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: ENABLE_ATTRIBUTE_SCAN
+  });
+
+  // ========== Hook dangerous sinks ==========
+  function hookSetter(proto, prop) {
+    const desc = Object.getOwnPropertyDescriptor(proto, prop);
+    if (!desc || !desc.set) return () => {};
+    const original = desc.set;
+    Object.defineProperty(proto, prop, {
+      set: function(v) {
+        try {
+          logSink(prop, { value: v, element: this });
+          // Try to highlight the element being set
+          if (this && this.nodeType === 1) highlightElement(this, `${prop} set`);
+        } catch(_) {}
+        return original.call(this, v);
+      },
+      get: desc.get
+    });
+    return () => Object.defineProperty(proto, prop, desc);
+  }
+
+  function hookMethod(proto, name) {
+    const original = proto[name];
+    if (typeof original !== "function") return () => {};
+    proto[name] = function(...args) {
+      try {
+        logSink(name, { arguments: args, element: this });
+        if (this && this.nodeType === 1) highlightElement(this, `${name}() call`);
+      } catch(_) {}
+      return original.apply(this, args);
+    };
+    return () => { proto[name] = original; };
+  }
+
+  const unhooks = [];
+
+  // Element content/URL setters
+  ["innerHTML", "outerHTML", "src", "href", "srcdoc"].forEach(p => {
+    const u = hookSetter(Element.prototype, p);
+    if (u) unhooks.push(u);
+  });
+
+  // Insertion + document writes
+  ["insertAdjacentHTML"].forEach(m => unhooks.push(hookMethod(Element.prototype, m)));
+  ["write", "writeln"].forEach(m => unhooks.push(hookMethod(Document.prototype, m)));
+
+  // JavaScript execution sinks
+  const origEval = window.eval;
+  window.eval = function(code) {
+    logSink("eval", { code });
+    return origEval.call(this, code);
+  };
+  unhooks.push(() => { window.eval = origEval; });
+
+  const origTimeout = window.setTimeout;
+  window.setTimeout = function(fn, delay, ...rest) {
+    if (typeof fn === "string") logSink("setTimeout(string)", { code: fn, delay });
+    return origTimeout.call(this, fn, delay, ...rest);
+  };
+  unhooks.push(() => { window.setTimeout = origTimeout; });
+
+  const origInterval = window.setInterval;
+  window.setInterval = function(fn, delay, ...rest) {
+    if (typeof fn === "string") logSink("setInterval(string)", { code: fn, delay });
+    return origInterval.call(this, fn, delay, ...rest);
+  };
+  unhooks.push(() => { window.setInterval = origInterval; });
+
+  const OrigFunction = Function;
+  window.Function = function(...args) {
+    logSink("Function constructor", { arguments: args });
+    return OrigFunction.apply(this, args);
+  };
+  unhooks.push(() => { window.Function = OrigFunction; });
+
+  // Initial scan for already-rendered markers
+  scanNodeDeep(document.documentElement);
+
+  // Public control API
+  const API = {
+    setMarkers(arr) {
+      MARKERS = Array.from(arr || []).map(String);
+      TEXT_MATCHER = buildMatcher();
+      console.log("🔧 XSS tripwire: markers updated →", MARKERS);
+      // Re-scan after marker change
+      scanNodeDeep(document.documentElement);
+    },
+    disable() {
+      try { mo.disconnect(); } catch(_) {}
+      try { style.remove(); } catch(_) {}
+      for (const u of unhooks) { try { u(); } catch(_) {} }
+      document.querySelectorAll(`.${HIGHLIGHT_CLASS}`).forEach(el => {
+        el.classList.remove(HIGHLIGHT_CLASS);
+        const b = el.querySelector(`:scope > .${BADGE_CLASS}`);
+        if (b) b.remove();
+      });
+      console.log("🧹 XSS tripwire disabled and cleaned up");
+    },
+    info() {
+      return {
+        markers: MARKERS.slice(),
+        highlightCount,
+        maxHighlights: MAX_HIGHLIGHTS
+      };
+    }
+  };
+
+  // Expose controls
+  window.XSSHooks = API;
+  console.log("✅ XSS tripwire installed. Configure with:");
+  console.log("   XSSHooks.setMarkers(['__XSS_PROBE__'])  // update markers");
+  console.log("   XSSHooks.info()                         // status");
+  console.log("   XSSHooks.disable()                      // unhook & cleanup");
+})();

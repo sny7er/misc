@@ -2,7 +2,7 @@
   // ========= CONFIG =========
   // Put *distinctive* markers you’ll inject (e.g., "__XSS_PROBE__", "XSS123").
   // You can include plain strings or regex-like strings (auto-escaped for text search).
-  let MARKERS = ["__XSS_PROBE__", "XSS123"];
+  let MARKERS = ["BLAH", "BLAH123"];
   const ENABLE_ATTRIBUTE_SCAN = true;           // also flag attributes that contain markers
   const BADGE_TEXT = "XSS";                     // small badge label
   const HIGHLIGHT_CLASS = "xss-tripwire-highlight";

@@ -9,22 +9,26 @@ function isPayloadLive(el) {
 
 (function(){
     console.clear();
-    console.log("=== DOM XSS Tripwire (CSP-safe) ===");
+    console.log("=== DOM XSS Tripwire (no inline JS) ===");
 
     console.log("[+] Document Content-Type:", document.contentType || "Unknown");
 
+    // Payload: harmless HTML tag with unique ID
+    var payload = `<div id="tripwire-marker" style="background:red;color:white">TRIPWIRE</div>`;
+
     var testDiv = document.createElement("div");
-    testDiv.innerHTML = `<svg id="tripwireSVG"></svg>`;
+    testDiv.innerHTML = payload;
     document.body.appendChild(testDiv);
 
-    if (document.getElementById("tripwireSVG")) {
-        console.log("[+] Payload parsed as HTML (sink exists)");
+    if (document.getElementById("tripwire-marker")) {
+        console.log("[+] Payload parsed as HTML (sink exists). CSP may be blocking execution.");
     } else {
-        console.warn("[-] Payload inert (likely HTML-encoded or JSON text)");
+        console.warn("[-] Payload inert (likely escaped).");
     }
 
     console.log("=== End of Tripwire ===");
 })();
+
 
 
 

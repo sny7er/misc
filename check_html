@@ -9,6 +9,30 @@ function isPayloadLive(el) {
 
 (function(){
     console.clear();
+    console.log("=== DOM XSS Tripwire (CSP-safe) ===");
+
+    console.log("[+] Document Content-Type:", document.contentType || "Unknown");
+
+    var testDiv = document.createElement("div");
+    testDiv.innerHTML = `<svg id="tripwireSVG"></svg>`;
+    document.body.appendChild(testDiv);
+
+    if (document.getElementById("tripwireSVG")) {
+        console.log("[+] Payload parsed as HTML (sink exists)");
+    } else {
+        console.warn("[-] Payload inert (likely HTML-encoded or JSON text)");
+    }
+
+    console.log("=== End of Tripwire ===");
+})();
+
+
+
+
+------
+
+(function(){
+    console.clear();
     console.log("=== DOM XSS Tripwire ===");
 
     // 1. Detect document type

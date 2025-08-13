@@ -1,0 +1,92 @@
+(() => {
+  let MARKERS = ["__XSS_PROBE__","XSS123"]; // set your unique marker(s) here
+
+  const SNIPPET_CHARS_BEFORE = 80;
+  const SNIPPET_CHARS_AFTER = 80;
+
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function buildMatcher() {
+    const parts = MARKERS.map(m => escapeRe(String(m))).filter(Boolean);
+    if (!parts.length) return null;
+    return new RegExp(parts.join("|"), "i");
+  }
+  let TEXT_MATCHER = buildMatcher();
+
+  function extractSnippet(htmlString) {
+    if (!TEXT_MATCHER || typeof htmlString !== "string") return null;
+    const match = htmlString.match(TEXT_MATCHER);
+    if (!match) return null;
+    const idx = htmlString.indexOf(match[0]);
+    const start = Math.max(0, idx - SNIPPET_CHARS_BEFORE);
+    const end = Math.min(htmlString.length, idx + match[0].length + SNIPPET_CHARS_AFTER);
+    return htmlString.slice(start, end);
+  }
+
+  function logSink(sinkName, details) {
+    console.group(`⚠️ DOM XSS Sink: ${sinkName}`);
+    if (details.value && typeof details.value === "string") {
+      const snippet = extractSnippet(details.value);
+      if (snippet) {
+        console.log("%cContext snippet:", "color:red;font-weight:bold;");
+        console.log("...", snippet, "...");
+      }
+    }
+    for (const [k, v] of Object.entries(details)) {
+      if (k !== "value") console.log(`${k}:`, v);
+    }
+    console.trace("Stack trace:");
+    console.groupEnd();
+  }
+
+  function hookSetter(proto, prop) {
+    const desc = Object.getOwnPropertyDescriptor(proto, prop);
+    if (!desc || !desc.set) return;
+    const original = desc.set;
+    Object.defineProperty(proto, prop, {
+      set: function(v) {
+        logSink(prop, { value: v, element: this });
+        return original.call(this, v);
+      },
+      get: desc.get
+    });
+  }
+
+  function hookMethod(proto, name) {
+    const original = proto[name];
+    if (typeof original !== "function") return;
+    proto[name] = function(...args) {
+      logSink(name, { arguments: args, element: this });
+      return original.apply(this, args);
+    };
+  }
+
+  ["innerHTML", "outerHTML", "src", "href", "srcdoc"].forEach(p => hookSetter(Element.prototype, p));
+  ["insertAdjacentHTML"].forEach(m => hookMethod(Element.prototype, m));
+  ["write", "writeln"].forEach(m => hookMethod(Document.prototype, m));
+
+  const origEval = window.eval;
+  window.eval = function(code) {
+    logSink("eval", { value: code });
+    return origEval.call(this, code);
+  };
+
+  const origTimeout = window.setTimeout;
+  window.setTimeout = function(fn, delay, ...rest) {
+    if (typeof fn === "string") logSink("setTimeout(string)", { value: fn, delay });
+    return origTimeout.call(this, fn, delay, ...rest);
+  };
+
+  const origInterval = window.setInterval;
+  window.setInterval = function(fn, delay, ...rest) {
+    if (typeof fn === "string") logSink("setInterval(string)", { value: fn, delay });
+    return origInterval.call(this, fn, delay, ...rest);
+  };
+
+  const OrigFunction = Function;
+  window.Function = function(...args) {
+    logSink("Function constructor", { arguments: args });
+    return OrigFunction.apply(this, args);
+  };
+
+  console.log("✅ DOM XSS tripwire with context snippets installed");
+})();

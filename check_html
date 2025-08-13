@@ -1,0 +1,35 @@
+function isPayloadLive(el) {
+  let test = document.createElement('div');
+  test.innerHTML = el;
+  return test.querySelector('svg, img, script') !== null;
+}
+
+
+------
+
+(function(){
+    console.clear();
+    console.log("=== DOM XSS Tripwire ===");
+
+    // 1. Detect document type
+    console.log("[+] Document Content-Type:", document.contentType || "Unknown");
+
+    // 2. Test payload
+    var payload = `<svg/onload=console.log("[TRIPWIRE] Payload executed!")>`;
+    console.log("[+] Testing payload:", payload);
+
+    // 3. Create test container and insert payload
+    var testDiv = document.createElement("div");
+    testDiv.innerHTML = payload;
+    document.body.appendChild(testDiv);
+
+    // 4. See if browser parsed it as HTML
+    var parsedElement = testDiv.querySelector("svg");
+    if(parsedElement){
+        console.log("[+] Payload was parsed as HTML! Possible DOM XSS sink.");
+    } else {
+        console.warn("[-] Payload is inert (rendered as plain text).");
+    }
+
+    console.log("=== End of Tripwire ===");
+})();

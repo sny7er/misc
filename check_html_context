@@ -1,0 +1,5 @@
+function isPayloadLive(el) {
+  let test = document.createElement('div');
+  test.innerHTML = el;
+  return test.querySelector('svg, img, script') !== null;
+}

@@ -1,0 +1,120 @@
+(() => {
+  // ===== CONFIG =====
+  let MARKERS = ["blah", "derp"];
+  const SNIPPET_BEFORE = 100;
+  const SNIPPET_AFTER  = 100;
+  const ENABLE_ATTR_SCAN = true;
+  const MAX_HIGHLIGHTS = 2000;
+  // ==================
+
+  // --- styles for highlight + badge
+  const STYLE = `
+    .xsstrip-hl {outline:3px solid rgba(255,0,0,.75)!important; outline-offset:2px; position:relative; box-shadow:0 0 0 2px rgba(255,0,0,.2);}
+    .xsstrip-badge {position:absolute; top:-8px; right:-8px; font:11px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Arial; background:#ff0033; color:#fff; border-radius:8px; padding:2px 6px; z-index:2147483647; pointer-events:none; box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  `;
+  const styleEl = document.createElement('style'); styleEl.textContent = STYLE; document.documentElement.appendChild(styleEl);
+
+  // --- helpers
+  const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  function buildMatcher() { return MARKERS.length ? new RegExp(MARKERS.map(escRe).join("|"), "i") : null; }
+  let MATCHER = buildMatcher();
+  const highlighted = new WeakSet();
+  let highlightCount = 0;
+
+  function contextSnippet(str) {
+    if (!MATCHER || typeof str !== "string") return null;
+    const m = str.match(MATCHER); if (!m) return null;
+    const idx = str.indexOf(m[0]);
+    const start = Math.max(0, idx - SNIPPET_BEFORE);
+    const end   = Math.min(str.length, idx + m[0].length + SNIPPET_AFTER);
+    return str.slice(start, end);
+  }
+
+  function addBadge(el, label="XSS") {
+    try {
+      if (!el.querySelector) return;
+      if (el.querySelector(':scope > .xsstrip-badge')) return;
+      const b = document.createElement('span');
+      b.className = 'xsstrip-badge';
+      b.textContent = label;
+      el.appendChild(b);
+    } catch {}
+  }
+
+  function highlight(el, why) {
+    if (!el || !(el instanceof Element) || highlighted.has(el) || highlightCount >= MAX_HIGHLIGHTS) return;
+    el.classList.add('xsstrip-hl');
+    el.title = (el.title ? el.title + " | " : "") + `XSS tripwire: ${why}`;
+    addBadge(el, 'XSS');
+    highlighted.add(el);
+    highlightCount++;
+  }
+
+  function logDetection(kind, info={}) {
+    console.group(`⚠️ DOM XSS: ${kind}`);
+    if (info.snippet) { console.log("%cContext snippet:", "color:red;font-weight:bold;"); console.log("...", info.snippet, "..."); }
+    for (const [k,v] of Object.entries(info)) { if (k!=='snippet') console.log(`${k}:`, v); }
+    console.trace("Stack trace:");
+    console.groupEnd();
+  }
+
+  // --- scanning
+  function checkTextNode(n) {
+    if (!n || n.nodeType !== Node.TEXT_NODE) return;
+    const val = n.nodeValue || "";
+    if (MATCHER && MATCHER.test(val)) {
+      const el = n.parentElement;
+      if (el) { highlight(el, 'marker in text'); logDetection('text-node', { element: el, snippet: contextSnippet(el.outerHTML || val) }); }
+    }
+  }
+
+  function checkAttributes(el) {
+    if (!ENABLE_ATTR_SCAN || !el || !el.attributes) return;
+    for (const a of el.attributes) {
+      const val = a.value || "";
+      if (MATCHER && MATCHER.test(val)) {
+        highlight(el, `marker in @${a.name}`);
+        logDetection('attribute', { element: el, attribute: a.name, value: val, snippet: contextSnippet(el.outerHTML || `${a.name}="${val}"`) });
+      }
+    }
+  }
+
+  function deepScan(root) {
+    if (!root) return;
+    if (root.nodeType === Node.TEXT_NODE) { checkTextNode(root); return; }
+    if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
+
+    // text nodes
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let n; while ((n = tw.nextNode())) checkTextNode(n);
+
+    // attributes
+    if (root.nodeType === Node.ELEMENT_NODE) checkAttributes(root);
+    if (root.querySelectorAll) {
+      const all = root.querySelectorAll('*');
+      for (const el of all) { checkAttributes(el); if (el.shadowRoot && el.shadowRoot.mode==='open') deepScan(el.shadowRoot); }
+    }
+  }
+
+  // --- MutationObserver
+  const observer = new MutationObserver(muts => {
+    for (const m of muts) {
+      if (m.type === 'childList') { m.addedNodes && m.addedNodes.forEach(n=>deepScan(n)); }
+      else if (m.type==='characterData') checkTextNode(m.target);
+      else if (m.type==='attributes') checkAttributes(m.target);
+    }
+  });
+  observer.observe(document, { subtree:true, childList:true, characterData:true, attributes:ENABLE_ATTR_SCAN });
+
+  // --- initial scan
+  deepScan(document);
+
+  // --- public API
+  const XSSFire = {
+    setMarkers(arr){ MARKERS=Array.from(arr||[]).map(String); MATCHER=buildMatcher(); deepScan(document); console.log('🔧 markers updated →', MARKERS); },
+    info(){ return { markers: MARKERS.slice(), highlights: highlightCount, maxHighlights: MAX_HIGHLIGHTS }; },
+    disable(){ observer.disconnect(); try{styleEl.remove()}catch{}; console.log('🧹 XSS tripwire disabled.'); }
+  };
+  window.XSSFire = XSSFire;
+  console.log('✅ XSS Tripwire (Firefox-proof) installed. Use XSSFire.setMarkers([...]) to update markers.');
+})();

